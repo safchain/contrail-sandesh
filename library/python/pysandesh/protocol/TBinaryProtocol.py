@@ -41,6 +41,25 @@ class TBinaryProtocol(TProtocolBase):
     self.strictRead = strictRead
     self.strictWrite = strictWrite
 
+  def writeSandeshBegin(self, name):
+    self.writeString(name)
+    return 0
+
+  def readContainerElementBegin(self):
+    return 0
+
+  def readContainerElementEnd(self):
+    return 0
+
+  def writeSandeshEnd(self):
+    return 0
+
+  def writeContainerElementBegin(self):
+    return 0
+
+  def writeContainerElementEnd(self):
+    return 0
+
   def writeMessageBegin(self, name, type, seqid):
     if self.strictWrite:
       self.writeI32(TBinaryProtocol.VERSION_1 | type)
@@ -50,183 +69,234 @@ class TBinaryProtocol(TProtocolBase):
       self.writeString(name)
       self.writeByte(type)
       self.writeI32(seqid)
+    return 0
 
   def writeMessageEnd(self):
-    pass
+    return 0
 
   def writeStructBegin(self, name):
-    pass
+    return 0
 
   def writeStructEnd(self):
-    pass
+    return 0
 
-  def writeFieldBegin(self, name, type, id):
+  def writeFieldBegin(self, name, type, id, annotations):
     self.writeByte(type)
     self.writeI16(id)
+    return 0
 
   def writeFieldEnd(self):
-    pass
+    return 0
 
   def writeFieldStop(self):
     self.writeByte(TType.STOP);
+    return 0
 
   def writeMapBegin(self, ktype, vtype, size):
     self.writeByte(ktype)
     self.writeByte(vtype)
     self.writeI32(size)
+    return 0
 
   def writeMapEnd(self):
-    pass
+    return 0
 
   def writeListBegin(self, etype, size):
     self.writeByte(etype)
     self.writeI32(size)
+    return 0
 
   def writeListEnd(self):
-    pass
+    return 0
 
   def writeSetBegin(self, etype, size):
     self.writeByte(etype)
     self.writeI32(size)
+    return 0
 
   def writeSetEnd(self):
-    pass
+    return 0
 
   def writeBool(self, bool):
     if bool:
       self.writeByte(1)
     else:
       self.writeByte(0)
+    return 0
 
   def writeByte(self, byte):
-    buff = pack("!b", byte)
+    buff = pack("!B", byte)
     self.trans.write(buff)
+    return 0
 
   def writeI16(self, i16):
     buff = pack("!h", i16)
     self.trans.write(buff)
+    return 0
 
   def writeI32(self, i32):
     buff = pack("!i", i32)
     self.trans.write(buff)
+    return 0
+
+  def writeU32(self, i32):
+    buff = pack("!I", i32)
+    self.trans.write(buff)
+    return 0
 
   def writeI64(self, i64):
     buff = pack("!q", i64)
     self.trans.write(buff)
+    return 0
 
   def writeDouble(self, dub):
     buff = pack("!d", dub)
     self.trans.write(buff)
+    return 0
 
   def writeString(self, str):
     self.writeI32(len(str))
     self.trans.write(str)
+    return 0
 
   def writeXML(self, str):
     self.writeI32(len(str))
     self.trans.write(str)
-    
+    return 0
+
+  def readSandeshBegin(self):
+    length, name = self.readString()
+    return length, name
+
+  def readSandeshEnd(self):
+    return 0
+
   def readMessageBegin(self):
-    sz = self.readI32()
+    total_length = 0
+    length, sz = self.readI32()
+    total_length += length
     if sz < 0:
       version = sz & TBinaryProtocol.VERSION_MASK
       if version != TBinaryProtocol.VERSION_1:
         raise TProtocolException(type=TProtocolException.BAD_VERSION, message='Bad version in readMessageBegin: %d' % (sz))
       type = sz & TBinaryProtocol.TYPE_MASK
-      name = self.readString()
-      seqid = self.readI32()
+      length, name = self.readString()
+      total_length += length
+      length, seqid = self.readI32()
+      total_length += length
     else:
       if self.strictRead:
         raise TProtocolException(type=TProtocolException.BAD_VERSION, message='No protocol version header')
       name = self.trans.readAll(sz)
-      type = self.readByte()
-      seqid = self.readI32()
-    return (name, type, seqid)
+      length, type = self.readByte()
+      total_length += length
+      length, seqid = self.readI32()
+      total_length += length
+    return (total_length, name, type, seqid)
 
   def readMessageEnd(self):
-    pass
+    return 0
 
   def readStructBegin(self):
-    pass
+    return 0
 
   def readStructEnd(self):
-    pass
+    return 0
 
   def readFieldBegin(self):
-    type = self.readByte()
+    total_length = 0
+    length, type = self.readByte()
+    total_length += length
     if type == TType.STOP:
-      return (None, type, 0)
-    id = self.readI16()
-    return (None, type, id)
+      return (total_length, None, type, 0)
+    length, id = self.readI16()
+    total_length += length
+    return (total_length, None, type, id)
 
   def readFieldEnd(self):
-    pass
+    return 0
 
   def readMapBegin(self):
-    ktype = self.readByte()
-    vtype = self.readByte()
-    size = self.readI32()
-    return (ktype, vtype, size)
+    total_length = 0
+    length, ktype = self.readByte()
+    total_length += length
+    length, vtype = self.readByte()
+    total_length += length
+    length, size = self.readI32()
+    total_length += length
+    return (length, ktype, vtype, size)
 
   def readMapEnd(self):
-    pass
+    return 0
 
   def readListBegin(self):
-    etype = self.readByte()
-    size = self.readI32()
-    return (etype, size)
+    total_length = 0
+    length, etype = self.readByte()
+    total_length += length
+    length, size = self.readI32()
+    total_length += length
+    return (length, etype, size)
 
   def readListEnd(self):
-    pass
+    return 0
 
   def readSetBegin(self):
-    etype = self.readByte()
-    size = self.readI32()
-    return (etype, size)
+    total_length = 0
+    length, etype = self.readByte()
+    total_length += length
+    length, size = self.readI32()
+    total_length += length
+    return (length, etype, size)
 
   def readSetEnd(self):
-    pass
+    return 0
 
   def readBool(self):
-    byte = self.readByte()
+    length, byte = self.readByte()
     if byte == 0:
-      return False
-    return True
+      return length, False
+    return length, True
 
   def readByte(self):
     buff = self.trans.readAll(1)
     val, = unpack('!b', buff)
-    return val
+    return (1, val)
 
   def readI16(self):
     buff = self.trans.readAll(2)
     val, = unpack('!h', buff)
-    return val
+    return (2, val)
 
   def readI32(self):
     buff = self.trans.readAll(4)
     val, = unpack('!i', buff)
-    return val
+    return (4, val)
 
   def readI64(self):
     buff = self.trans.readAll(8)
     val, = unpack('!q', buff)
-    return val
+    return (8, val)
 
   def readDouble(self):
     buff = self.trans.readAll(8)
     val, = unpack('!d', buff)
-    return val
+    return (8, val)
 
   def readString(self):
-    len = self.readI32()
+    total_length = 0
+    length, len = self.readI32()
+    total_length += length
     str = self.trans.readAll(len)
-    return str
+    total_length += len
+    return (total_length, str)
 
   def readXML(self):
-    len = self.readI32()
+    total_length = 0
+    length, len = self.readI32()
+    total_length += length
     str = self.trans.readAll(len)
-    return str
+    otal_length += len
+    return (total_length, str)
 
 class TBinaryProtocolFactory:
   def __init__(self, strictRead=False, strictWrite=True):
