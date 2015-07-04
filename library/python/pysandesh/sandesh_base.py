@@ -912,3 +912,7 @@ class SandeshTrace(Sandesh):
     # end trace_msg
 
 # end class SandeshTrace
+
+
+class SandeshBuffer(Sandesh):
+    pass
