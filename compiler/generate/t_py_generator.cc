@@ -879,7 +879,8 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
             << type_to_enum((*m_iter)->get_type()) << ", "
             << "'" << (*m_iter)->get_name() << "'" << ", "
             << type_to_spec_args((*m_iter)->get_type()) << ", "
-            << render_field_default_value(*m_iter) << ", "
+            //<< render_field_default_value(*m_iter) << ", "
+            << "0, "
             << "),"
             << " # " << sorted_keys_pos
             << endl;
@@ -1330,6 +1331,8 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
   } else if (sandesh_type->is_sandesh_trace() ||
              sandesh_type->is_sandesh_trace_object()) {
     base_class = "sandesh_base.SandeshTrace";
+  } else if (sandesh_type->is_sandesh_buffer()) {
+    base_class = "sandesh_base.SandeshBuffer";
   } else {
     throw "compiler error: unsupported sandesh type " +
       t_base_type::t_base_name(sandesh_type->get_base());
