@@ -1,4 +1,4 @@
-#
+length, #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
 # distributed with this work for additional information
@@ -193,7 +193,7 @@ class TProtocolBase:
 
   def readUUID(self):
     pass
-  
+
   def skip(self, type):
     if type == TType.STOP:
       return
@@ -212,9 +212,9 @@ class TProtocolBase:
     elif type == TType.STRING:
       self.readString()
     elif type == TType.XML:
-      self.readXML()      
+      self.readXML()
     elif type == TType.STRUCT:
-      name = self.readStructBegin()
+      length = self.readStructBegin()
       while True:
         (length, name, type, id) = self.readFieldBegin()
         if type == TType.STOP:
@@ -235,7 +235,7 @@ class TProtocolBase:
         self.skip(etype)
       self.readSetEnd()
     elif type == TType.LIST:
-      (lenght, etype, size) = self.readListBegin()
+      (length, etype, size) = self.readListBegin()
       for i in range(size):
         self.skip(etype)
       self.readListEnd()
@@ -281,7 +281,7 @@ class TProtocolBase:
     ttype, tspec = spec[0], spec[1]
     r_handler = self._TTYPE_HANDLERS[ttype][0]
     reader = getattr(self, r_handler)
-    (list_type, list_len) = self.readListBegin()
+    (length, list_type, list_len) = self.readListBegin()
     if tspec is None:
       # list values are simple types
       for idx in xrange(list_len):
@@ -301,7 +301,7 @@ class TProtocolBase:
     ttype, tspec = spec[0], spec[1]
     r_handler = self._TTYPE_HANDLERS[ttype][0]
     reader = getattr(self, r_handler)
-    (set_type, set_len) = self.readSetBegin()
+    (length, set_type, set_len) = self.readSetBegin()
     if tspec is None:
       # set members are simple types
       for idx in xrange(set_len):
@@ -324,7 +324,7 @@ class TProtocolBase:
     results = dict()
     key_ttype, key_spec = spec[0], spec[1]
     val_ttype, val_spec = spec[2], spec[3]
-    (map_ktype, map_vtype, map_len) = self.readMapBegin()
+    (length, map_ktype, map_vtype, map_len) = self.readMapBegin()
     # TODO: compare types we just decoded with thrift_spec and abort/skip if types disagree
     key_reader = getattr(self, self._TTYPE_HANDLERS[key_ttype][0])
     val_reader = getattr(self, self._TTYPE_HANDLERS[val_ttype][0])
@@ -346,7 +346,7 @@ class TProtocolBase:
   def readStruct(self, obj, thrift_spec):
     self.readStructBegin()
     while True:
-      (fname, ftype, fid) = self.readFieldBegin()
+      (length, fname, ftype, fid) = self.readFieldBegin()
       if ftype == TType.STOP:
         break
       try:
