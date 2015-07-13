@@ -216,25 +216,26 @@ class TProtocolBase:
     elif type == TType.STRUCT:
       name = self.readStructBegin()
       while True:
-        (name, type, id) = self.readFieldBegin()
+        (length, name, type, id) = self.readFieldBegin()
         if type == TType.STOP:
           break
         self.skip(type)
         self.readFieldEnd()
       self.readStructEnd()
     elif type == TType.MAP:
-      (ktype, vtype, size) = self.readMapBegin()
+      (length, ktype, vtype, size) = self.readMapBegin()
       for i in range(size):
         self.skip(ktype)
         self.skip(vtype)
       self.readMapEnd()
     elif type == TType.SET:
-      (etype, size) = self.readSetBegin()
+      (length, etype, size) = self.readSetBegin()
+
       for i in range(size):
         self.skip(etype)
       self.readSetEnd()
     elif type == TType.LIST:
-      (etype, size) = self.readListBegin()
+      (lenght, etype, size) = self.readListBegin()
       for i in range(size):
         self.skip(etype)
       self.readListEnd()
