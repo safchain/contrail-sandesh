@@ -16,10 +16,123 @@ import uuid
 sys.path.insert(1, sys.path[0]+'/../../../python')
 
 from pysandesh.transport import TTransport
+from pysandesh.protocol import TBinaryProtocol
 from pysandesh.protocol import TXMLProtocol
 from gen_py.encode_decode_test.ttypes import *
 
-class SandeshEncodeDecodeTest(unittest.TestCase):
+
+class SandeshEncodeDecodeTestBinary(unittest.TestCase):
+    def setUp(self):
+        self._protocol_factory = TBinaryProtocol.TBinaryProtocolFactory()
+        self.setUpEncode()
+    #end setUp
+
+    def setUpEncode(self):
+        self._wtransport = TTransport.TMemoryBuffer()
+        self._wprotocol = self._protocol_factory.getProtocol(self._wtransport)
+    #end setUpEncode
+
+    def setUpDecode(self, buf):
+        self._rtransport = TTransport.TMemoryBuffer(buf)
+        self._rprotocol = self._protocol_factory.getProtocol(self._rtransport)
+    #end setUpDecode
+
+    def test_basic_types(self):
+        print '-------------------------'
+        print '     Test Basic Types    '
+        print '-------------------------'
+        # Encode Test
+        x = uuid.UUID('{00010203-0405-0607-0809-0a0b0c0d0e0f}')
+        btype_encode = BasicTypesTest(bool_1=True, byte_1=127, i16_1=4321,
+            i32_1=54321, i64_1=654321, double_1=12.345, string_1="Basic Types Test",
+            u16_1=65535, u32_1=4294967295, u64_1=18446744073709551615, ipv4_1=4294967295,
+            xml_1="<abc>", xml_2 ="abc", xml_3="abc]", xml_4="abc]]", uuid_1=x)
+        self.assertNotEqual(-1, btype_encode.write(self._wprotocol))
+        expected_data = ('\x00\x00\x00\x0eBasicTypesTest\x02\x00\x01\x01\x03'
+                         '\x00\x02\x7f\x06\x00\x03\x10\xe1\x08\x00\x04\x00\x00'
+                         '\xd41\n\x00\x05\x00\x00\x00\x00\x00\t\xfb\xf1\x04\x00'
+                         '\x06@(\xb0\xa3\xd7\n=q\x0b\x00\x07\x00\x00\x00'
+                         '\x10Basic Types Test\x0b\x00\x08\x00\x00\x00\n'
+                         'Last field\x13\x00\t\xff\xff\x14\x00\n\xff\xff\xff'
+                         '\xff\t\x00\x0b\xff\xff\xff\xff\xff\xff\xff\xff\x15'
+                         '\x00\x0c\x00\x00\x00\x05<abc>\x15\x00\r\x00\x00\x00'
+                         '\x03abc\x15\x00\x0e\x00\x00\x00\x04abc]\x15\x00\x0f'
+                         '\x00\x00\x00\x05abc]]\x16\x00\x10\x00\x00\x00'
+                         '\n4294967295\x17\x00\x11\x00\x00\x00'
+                         '$00010203-0405-0607-0809-0a0b0c0d0e0f\x00')
+        actual_data = self._wtransport.getvalue()
+        self.assertEqual(expected_data, actual_data)
+
+        # Decode Test
+        self.setUpDecode(expected_data)
+        btype_decode = BasicTypesTest()
+        self.assertNotEqual(-1, btype_decode.read(self._rprotocol))
+        self.assertTrue(btype_encode.compare(btype_decode))
+    #end test_basic_types
+
+    def test_container_types(self):
+        print '-------------------------'
+        print '   Test Container Types  '
+        print '-------------------------'
+        # Encode Test
+        list_bool = [True, True, False, True]
+        list_byte = [123, 12, 23]
+        btype_st1 = StructBasicTypes(i16_1=5678)
+        btype_st2 = StructBasicTypes(bool_1=True)
+        list_btype_st = []
+        list_btype_st.append(btype_st1)
+        list_btype_st.append(btype_st2)
+        list_i32_1 = [1111, 2222, 3333]
+        list_str1 = ['nicira', 'midokura', 'contrail']
+        list_str2 = ['nvgre', 'vxlan']
+        list_uuid_1 = [uuid.UUID('{00010203-0405-0607-0809-0a0b0c0d0e0f}'), uuid.UUID('{11110203-0405-0607-0809-0a0b0c0d0e0f}')]
+        ctype_st1 = StructContainerTypes(list_i32_1, list_str1, list_btype_st, list_uuid_1)
+        ctype_st2 = StructContainerTypes(li32_1=[], lstring_1=list_str2)
+        list_ctype_st = []
+        list_ctype_st.append(ctype_st1)
+        list_ctype_st.append(ctype_st2)
+        container_encode = ContainerTypesTest(list_bool, list_byte,
+                list_btype_st, list_ctype_st)
+        self.assertNotEqual(-1, container_encode.write(self._wprotocol))
+        expected_data = ('\x00\x00\x00\x12ContainerTypesTest\x0f\x00'
+                         '\x01\x02\x00\x00\x00\x04\x01\x01\x00\x01\x0f'
+                         '\x00\x02\x03\x00\x00\x00\x03{\x0c\x17\x0f\x00'
+                         '\x03\x0c\x00\x00\x00\x02\x0b\x00\x01\x00\x00\x00'
+                         '\x0bFirst field\x06\x00\x03\x16.\x0b\x00\x04\x00'
+                         '\x00\x00\nLast field\x17\x00\x0e\x00\x00\x00'
+                         '$00010203-0405-0607-0423-023434265323\x00\x0b\x00'
+                         '\x01\x00\x00\x00\x0bFirst field\x02\x00\x02\x01\x0b'
+                         '\x00\x04\x00\x00\x00\nLast field\x17\x00\x0e\x00'
+                         '\x00\x00$00010203-0405-0607-0423-023434265323\x00'
+                         '\x0f\x00\x04\x0c\x00\x00\x00\x02\x0f\x00\x01\x08'
+                         '\x00\x00\x00\x03\x00\x00\x04W\x00\x00\x08\xae\x00'
+                         '\x00\r\x05\x0f\x00\x02\x0b\x00\x00\x00\x03\x00\x00'
+                         '\x00\x06nicira\x00\x00\x00\x08midokura\x00\x00\x00'
+                         '\x08contrail\x0f\x00\x03\x0c\x00\x00\x00\x02\x0b\x00'
+                         '\x01\x00\x00\x00\x0bFirst field\x06\x00\x03\x16.\x0b'
+                         '\x00\x04\x00\x00\x00\nLast field\x17\x00\x0e\x00\x00'
+                         '\x00$00010203-0405-0607-0423-023434265323\x00\x0b'
+                         '\x00\x01\x00\x00\x00\x0bFirst field\x02\x00\x02\x01'
+                         '\x0b\x00\x04\x00\x00\x00\nLast field\x17\x00\x0e\x00'
+                         '\x00\x00$00010203-0405-0607-0423-023434265323\x00'
+                         '\x0f\x00\x04\x17\x00\x00\x00\x02\x00\x00\x00'
+                         '$00010203-0405-0607-0809-0a0b0c0d0e0f\x00\x00\x00'
+                         '$11110203-0405-0607-0809-0a0b0c0d0e0f\x00\x0f\x00'
+                         '\x01\x08\x00\x00\x00\x00\x0f\x00\x02\x0b\x00\x00\x00'
+                         '\x02\x00\x00\x00\x05nvgre\x00\x00\x00\x05vxlan'
+                         '\x00\x00')
+        actual_data = self._wtransport.getvalue()
+        self.assertEqual(expected_data, actual_data)
+
+        # Decode Test
+        self.setUpDecode(expected_data)
+        container_decode = ContainerTypesTest()
+        self.assertNotEqual(-1, container_decode.read(self._rprotocol))
+        self.assertTrue(container_encode.compare(container_decode))
+    #end test_container_types
+
+
+class SandeshEncodeDecodeTestXML(unittest.TestCase):
     def setUp(self):
         self._protocol_factory = TXMLProtocol.TXMLProtocolFactory()
         self.setUpEncode()
@@ -68,14 +181,14 @@ class SandeshEncodeDecodeTest(unittest.TestCase):
         expected_data = '<BasicTypesTest type="sandesh"><string_1 type="string" identifier="7">&lt;sandesh_types&gt;&lt;type1&gt;"systemlog"&lt;/type1&gt;&lt;type2&gt;&apos;objectlog&apos;&lt;/type2&gt;&lt;type3&gt;uve &amp; trace&lt;/type3&gt;&lt;/sandesh_types&gt;</string_1><str8 type="string" identifier="8">Last field</str8></BasicTypesTest>'
         actual_data = self._wtransport.getvalue()
         self.assertEqual(expected_data, actual_data)
-       
+
         # Decode Test
         self.setUpDecode(expected_data)
         xml_decode = BasicTypesTest()
         self.assertNotEqual(-1, xml_decode.read(self._rprotocol))
         self.assertTrue(xml_encode.compare(xml_decode))
     #end test_xml_string
-    
+
     def test_xml(self):
         print '-------------------------'
         print '     Test XML            '
@@ -87,7 +200,7 @@ class SandeshEncodeDecodeTest(unittest.TestCase):
         expected_data = '<BasicTypesTest type="sandesh"><str8 type="string" identifier="8">Last field</str8><xml_1 type="xml" identifier="12"><![CDATA[<sandesh_types><type1>\"systemlog\"</type1><type2>\'objectlog\'</type2><type3>uve & trace</type3></sandesh_types>]]></xml_1></BasicTypesTest>'
         actual_data = self._wtransport.getvalue()
         self.assertEqual(expected_data, actual_data)
-       
+
         # Decode Test
         self.setUpDecode(expected_data)
         xml_decode = BasicTypesTest()

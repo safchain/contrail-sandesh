@@ -17,6 +17,9 @@
 # under the License.
 #
 
+import ctypes
+import uuid
+
 from TProtocol import *
 from struct import pack, unpack
 
@@ -117,6 +120,11 @@ class TBinaryProtocol(TProtocolBase):
   def writeSetEnd(self):
     return 0
 
+  # private functions
+  def writeBuffer(self, data):
+      self.writeI32(len(data))
+      self.trans.write(data)
+
   def writeBool(self, bool):
     if bool:
       self.writeByte(1)
@@ -134,6 +142,11 @@ class TBinaryProtocol(TProtocolBase):
     self.trans.write(buff)
     return 0
 
+  def writeU16(self, i16):
+    buff = pack("!H", i16)
+    self.trans.write(buff)
+    return 0
+
   def writeI32(self, i32):
     buff = pack("!i", i32)
     self.trans.write(buff)
@@ -141,6 +154,11 @@ class TBinaryProtocol(TProtocolBase):
 
   def writeU32(self, i32):
     buff = pack("!I", i32)
+    self.trans.write(buff)
+    return 0
+
+  def writeU64(self, i64):
+    buff = pack("!Q", i64)
     self.trans.write(buff)
     return 0
 
@@ -155,13 +173,25 @@ class TBinaryProtocol(TProtocolBase):
     return 0
 
   def writeString(self, str):
-    self.writeI32(len(str))
-    self.trans.write(str)
+    self.writeBuffer(str)
     return 0
 
   def writeXML(self, str):
-    self.writeI32(len(str))
-    self.trans.write(str)
+    self.writeBuffer(str)
+    return 0
+
+  def writeIPV4(self, ipv4):
+    try:
+        self.writeBuffer(str(ctypes.c_uint(ipv4).value))
+    except TypeError:
+        return -1
+    return 0
+
+  def writeUUID(self, uuid):
+    try:
+        self.writeBuffer(str(uuid))
+    except TypeError:
+        return -1
     return 0
 
   def readSandeshBegin(self):
@@ -224,7 +254,7 @@ class TBinaryProtocol(TProtocolBase):
     total_length += length
     length, size = self.readI32()
     total_length += length
-    return (length, ktype, vtype, size)
+    return (total_length, ktype, vtype, size)
 
   def readMapEnd(self):
     return 0
@@ -235,7 +265,7 @@ class TBinaryProtocol(TProtocolBase):
     total_length += length
     length, size = self.readI32()
     total_length += length
-    return (length, etype, size)
+    return (total_length, etype, size)
 
   def readListEnd(self):
     return 0
@@ -246,10 +276,18 @@ class TBinaryProtocol(TProtocolBase):
     total_length += length
     length, size = self.readI32()
     total_length += length
-    return (length, etype, size)
+    return (total_length, etype, size)
 
   def readSetEnd(self):
     return 0
+
+  def readBuffer(self):
+    total_length = 0
+    length, len = self.readI32()
+    total_length += length
+    buff = self.trans.readAll(len)
+    total_length += len
+    return (total_length, buff)
 
   def readBool(self):
     length, byte = self.readByte()
@@ -262,15 +300,35 @@ class TBinaryProtocol(TProtocolBase):
     val, = unpack('!b', buff)
     return (1, val)
 
+  def readU16(self):
+    buff = self.trans.readAll(2)
+    val, = unpack('!H', buff)
+    return (2, val)
+
   def readI16(self):
     buff = self.trans.readAll(2)
     val, = unpack('!h', buff)
     return (2, val)
 
+  def readU32(self):
+    buff = self.trans.readAll(4)
+    val, = unpack('!I', buff)
+    return (4, val)
+
   def readI32(self):
     buff = self.trans.readAll(4)
     val, = unpack('!i', buff)
     return (4, val)
+
+  def readU64(self):
+    buff = self.trans.readAll(8)
+    val, = unpack('!Q', buff)
+    return (8, val)
+
+  def readI64(self):
+    buff = self.trans.readAll(8)
+    val, = unpack('!q', buff)
+    return (8, val)
 
   def readI64(self):
     buff = self.trans.readAll(8)
@@ -283,20 +341,30 @@ class TBinaryProtocol(TProtocolBase):
     return (8, val)
 
   def readString(self):
-    total_length = 0
-    length, len = self.readI32()
-    total_length += length
-    str = self.trans.readAll(len)
-    total_length += len
-    return (total_length, str)
+    return self.readBuffer()
 
   def readXML(self):
-    total_length = 0
-    length, len = self.readI32()
-    total_length += length
-    str = self.trans.readAll(len)
-    otal_length += len
-    return (total_length, str)
+    return self.readBuffer()
+
+  def readUUID(self):
+    length, uuid_str = self.readBuffer()
+    if uuid_str is None:
+      return (-1, None)
+    try:
+      uuid_temp = uuid.UUID(uuid_str)
+    except ValueError:
+      return (-1, None)
+    return (length, uuid_temp)
+
+  def readIPV4(self):
+    (length, ipv4_str) = self.readBuffer()
+    if ipv4_str is None:
+      return (-1, None)
+    try:
+      ipv4 = int(ipv4_str)
+    except ValueError:
+      return (-1, None)
+    return (length, ipv4)
 
 class TBinaryProtocolFactory:
   def __init__(self, strictRead=False, strictWrite=True):
